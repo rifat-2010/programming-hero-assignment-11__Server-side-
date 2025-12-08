@@ -5,7 +5,7 @@ const app = express()
 const port = 3000
 app.use(cors());
 app.use(express.json());
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -30,6 +30,7 @@ async function run() {
 
     const db = client.db('book-db')
     const bookCollection = db.collection('books')
+    const usersCollection = db.collection('users')
 
 
     // data fetching from mongodb and http://localhost:3000/ server created
@@ -44,6 +45,51 @@ async function run() {
 
 
 
+    // fetching one data from mongodb and for Details page of every single card data.
+    // findOne
+    app.get('/books/:id', async(req, res) => {
+
+      const {id} =  req.params;
+      // console.log(id)
+      const result = await bookCollection.findOne({_id: new ObjectId(id)});
+      res.send({
+      success: true,
+      result
+      })
+    })
+
+
+
+
+
+      // save or update a user in db
+    app.post('/user', async (req, res) => {
+      const userData = req.body
+      userData.created_at = new Date().toISOString()
+      userData.last_loggedIn = new Date().toISOString()
+      userData.role = 'customer'
+
+      const query = {
+        email: userData.email,
+      }
+
+      const alreadyExists = await usersCollection.findOne(query)
+      console.log('User Already Exists---> ', !!alreadyExists)
+
+      if (alreadyExists) {
+        console.log('Updating user info......')
+        const result = await usersCollection.updateOne(query, {
+          $set: {
+            last_loggedIn: new Date().toISOString(),
+          },
+        })
+        return res.send(result)
+      }
+
+      console.log('Saving new user info......')
+      const result = await usersCollection.insertOne(userData)
+      res.send(result)
+    })
 
 
 
