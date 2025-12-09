@@ -99,6 +99,94 @@ app.get('/latest-books', async (req, res) => {
 
 
 
+    //PUT //For Update_User's __Info
+   //updateOne
+   //updateMany
+
+  //  app.put('/books/:id', async (req, res) => {
+  //       const {id} = req.params
+  //       const data = req.body
+  //       // console.log(id)
+  //       // console.log(data)
+  //       const objectId = new ObjectId(id)
+  //       const filter = {_id: objectId}
+  //       const update = {
+  //           $set: data
+  //       }
+
+  //      const result  = await bookCollection.updateOne(filter, update)
+
+
+  //      res.send({
+  //       success: true,
+  //       result
+  //      })
+  //  })
+
+
+
+
+
+
+  // GET user by MongoDB _id
+app.get('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const objectId = new ObjectId(id);
+    const user = await usersCollection.findOne({ _id: objectId });
+    if (!user) return res.status(404).send({ success: false, message: 'User not found' });
+    res.send(user);
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+});
+
+
+
+// GET user by email
+app.get('/users', async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).send({ success: false, message: "Email is required" });
+
+  try {
+    const user = await usersCollection.findOne({ email });
+    if (!user) return res.status(404).send({ success: false, message: "User not found" });
+
+    res.send({ success: true, user });
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+});
+
+
+
+
+   //PUT //For Update_Habit __ page
+   //updateOne
+   //updateMany
+
+   app.put('/users/:id', async (req, res) => {
+        const {id} = req.params
+        const data = req.body
+        // console.log(id)
+        // console.log(data)
+        const objectId = new ObjectId(id)
+        const filter = {_id: objectId}
+        const update = {
+            $set: data
+        }
+
+       const result  = await usersCollection.updateOne(filter, update)
+
+
+       res.send({
+        success: true,
+        result
+       })
+   })
+
+
+
 
       // save or update a user in db
     app.post('/user', async (req, res) => {
