@@ -3,7 +3,11 @@ const cors = require("cors");
 require("dotenv").config()
 const app = express()
 const port = 3000
-app.use(cors());
+// need to change origin url to deploy url after finishing deploy this site
+app.use(cors({
+  origin: ['http://localhost:5173'],
+  credentials: true,
+}));
 app.use(express.json());
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
@@ -18,13 +22,13 @@ const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}
 // jwt middlewares
 const verifyJWT = async (req, res, next) => {
   const token = req?.headers?.authorization?.split(' ')[1]
-  console.log(token)
+  console.log('string---> token', token)
   if (!token) return res.status(401).send({ message: 'Unauthorized Access!' })
   try {
 
     const decoded = await admin.auth().verifyIdToken(token)
     req.tokenEmail = decoded.email
-    console.log(decoded)
+    console.log('decoded---->', decoded)
     next()
   } catch (err) {
     console.log(err)
@@ -99,33 +103,13 @@ app.get('/latest-books', async (req, res) => {
 
 
 
-    //PUT //For Update_User's __Info
-   //updateOne
-   //updateMany
+// get a user's role
+app.get('/user/role/:email',  async(req, res) => {
+  const email = req.params.email;
+  const result = await usersCollection.findOne({email});
+  res.send({role: result?.role})
 
-  //  app.put('/books/:id', async (req, res) => {
-  //       const {id} = req.params
-  //       const data = req.body
-  //       // console.log(id)
-  //       // console.log(data)
-  //       const objectId = new ObjectId(id)
-  //       const filter = {_id: objectId}
-  //       const update = {
-  //           $set: data
-  //       }
-
-  //      const result  = await bookCollection.updateOne(filter, update)
-
-
-  //      res.send({
-  //       success: true,
-  //       result
-  //      })
-  //  })
-
-
-
-
+})
 
 
   // GET user by MongoDB _id
@@ -165,7 +149,7 @@ app.get('/users', async (req, res) => {
    //updateOne
    //updateMany
 
-   app.put('/users/:id', async (req, res) => {
+   app.put('/users/:id', verifyJWT, async (req, res) => {
         const {id} = req.params
         const data = req.body
         // console.log(id)
@@ -193,14 +177,14 @@ app.get('/users', async (req, res) => {
       const userData = req.body
       userData.created_at = new Date().toISOString()
       userData.last_loggedIn = new Date().toISOString()
-      userData.role = 'customer'
+      userData.role = 'user'
 
       const query = {
         email: userData.email,
       }
 
       const alreadyExists = await usersCollection.findOne(query)
-      console.log('User Already Exists---> ', !!alreadyExists)
+      console.log('User Already Exconsoleists---> ', !!alreadyExists)
 
       if (alreadyExists) {
         console.log('Updating user info......')
