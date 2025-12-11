@@ -62,12 +62,10 @@ async function run() {
     // data fetching from mongodb and http://localhost:3000/ server created
     // find
     // findOne
-    app.get('/books', async(req, res) => {
-
-      const result = await bookCollection.find().toArray();
-      // console.log(result)
-      res.send(result);
-    })
+  app.get('/books', async (req, res) => {
+  const result = await bookCollection.find({ status: "published" }).toArray();
+  res.send(result);
+  });
 
 
 
