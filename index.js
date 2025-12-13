@@ -349,7 +349,7 @@ app.get('/users', async (req, res) => {
         customerName: String(paymentInfo.customer.name),
         customerEmail: String(paymentInfo.customer.email),
       },
-        success_url: `http://localhost:5173/payment-success`,
+        success_url: `http://localhost:5173/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `http://localhost:5173/book-details_page/${paymentInfo?.bookId}`,
       })
       res.send({ url: session.url })
