@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require("cors");
 require("dotenv").config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express()
 const port = 3000
 // need to change origin url to deploy url after finishing deploy this site
@@ -10,7 +11,14 @@ app.use(cors({
 }));
 app.use(express.json());
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+// const admin = require('firebase-admin');
 
+
+
+// const serviceAccount = JSON.parse()
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// })
 
 
 
@@ -19,22 +27,23 @@ const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}
 
 
 
-// jwt middlewares
-const verifyJWT = async (req, res, next) => {
-  const token = req?.headers?.authorization?.split(' ')[1]
-  console.log('string---> token', token)
-  if (!token) return res.status(401).send({ message: 'Unauthorized Access!' })
-  try {
+// // jwt middlewares
+// const verifyJWT = async (req, res, next) => {
+//   const token = req?.headers?.authorization?.split(' ')[1]
+//   // console.log('console -->', req.headers.authorization)
+//   console.log('string---> token', token)
+//   if (!token) return res.status(401).send({ message: 'Unauthorized Access!' })
+//   try {
 
-    const decoded = await admin.auth().verifyIdToken(token)
-    req.tokenEmail = decoded.email
-    console.log('decoded---->', decoded)
-    next()
-  } catch (err) {
-    console.log(err)
-    return res.status(401).send({ message: 'Unauthorized Access!', err })
-  }
-}
+//     const decoded = await admin.auth().verifyIdToken(token)
+//     req.tokenEmail = decoded.email
+//     console.log('decoded---->', decoded)
+//     next()
+//   } catch (err) {
+//     console.log(err)
+//     return res.status(401).send({ message: 'Unauthorized Access!', err })
+//   }
+// }
 
 
 
@@ -57,6 +66,7 @@ async function run() {
     const db = client.db('book-db')
     const bookCollection = db.collection('books')
     const usersCollection = db.collection('users')
+    const orderCollection = db.collection('order')
 
 
     // data fetching from mongodb and http://localhost:3000/ server created
@@ -67,36 +77,36 @@ async function run() {
     res.send(result);
    });
 
+   
+   
+       // fetching one data from mongodb and for Details page of every single card data.
+       // findOne
+       app.get('/books/:id', async(req, res) => {
+   
+         const {id} =  req.params;
+         // console.log(id)
+         const result = await bookCollection.findOne({_id: new ObjectId(id)});
+         res.send({
+         success: true,
+         result
+         })
+       })
+
+
 
        // for search bar in Public_Habits page
     app.get("/search", async (req, res) => {
         const search = req.query.search || "";
         // console.log(search)
-
         const filter = {
+          status: "published",
           title: { $regex: search, $options: "i" }
         };
-
         const result = await bookCollection.find(filter).toArray();
         // console.log(result);
         res.send(result);
     });
 
-
-
-
-    // fetching one data from mongodb and for Details page of every single card data.
-    // findOne
-    app.get('/books/:id', async(req, res) => {
-
-      const {id} =  req.params;
-      // console.log(id)
-      const result = await bookCollection.findOne({_id: new ObjectId(id)});
-      res.send({
-      success: true,
-      result
-      })
-    })
 
 
 
@@ -140,6 +150,99 @@ app.get('/users/:id', async (req, res) => {
 });
 
 
+    // post method //for new book_cart
+    //  insertOne
+   //  insertMany
+   
+   app.post('/books', async (req, res) => {
+     const data = req.body
+        // console.log(data)
+        const result = await bookCollection.insertOne(data)
+        res.send({
+            success: true,
+            result
+        })
+   })
+
+
+
+    // POST /orders → for new order data adding
+    app.post('/orders', async (req, res) => {
+      try {
+        const data = req.body;
+        const orderData = {
+          userId: data.userId,  
+          bookId: data.bookId,    
+          Price: data.price,    
+          name: data.name,       
+          email: data.email,     
+          phone: data.phone,
+          address: data.address,
+          orderDate: new Date(),
+          status: 'pending',
+          paymentStatus: 'unpaid'
+        };
+
+        const result = await orderCollection.insertOne(orderData);
+
+        res.send({
+          success: true,
+          result
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ success: false, message: "Failed to create order" });
+      }
+    });
+
+
+
+// GET /orders?email=user@email.com
+app.get('/orders', async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    if (!email) {
+      return res.status(400).send({ success: false, message: "Email is required" });
+    }
+
+    const orders = await orderCollection.find({ email }).toArray();
+
+    res.send({
+      success: true,
+      orders
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false, message: "Failed to fetch orders" });
+  }
+});
+
+
+
+// PATCH /orders/cancel/:id
+app.patch('/orders/cancel/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const result = await orderCollection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: 'cancelled'
+        }
+      }
+    );
+
+    res.send({ success: true, result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false });
+  }
+});
+
+
+
 
 // GET user by email
 app.get('/users', async (req, res) => {
@@ -163,7 +266,7 @@ app.get('/users', async (req, res) => {
    //updateOne
    //updateMany
 
-   app.put('/users/:id', verifyJWT, async (req, res) => {
+   app.put('/users/:id',  async (req, res) => {
         const {id} = req.params
         const data = req.body
         // console.log(id)
@@ -213,6 +316,43 @@ app.get('/users', async (req, res) => {
       console.log('Saving new user info......')
       const result = await usersCollection.insertOne(userData)
       res.send(result)
+    })
+
+
+
+        // Payment endpoints
+    app.post('/create-checkout-session', async (req, res) => {
+      const paymentInfo = req.body
+      console.log(paymentInfo)
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Book Order',
+              description: `Order for book ID: ${paymentInfo.bookInfo.bookId}`,
+            },
+            unit_amount: paymentInfo?.bookInfo?.price * 100,
+          },
+          quantity: paymentInfo?.quantity || 1,
+        },
+      ],
+
+      customer_email: paymentInfo?.customer?.email,
+
+      mode: 'payment',
+
+      metadata: {
+        orderId: String(paymentInfo.orderId),
+        bookId: String(paymentInfo.bookInfo.bookId),
+        customerName: String(paymentInfo.customer.name),
+        customerEmail: String(paymentInfo.customer.email),
+      },
+        success_url: `http://localhost:5173/payment-success`,
+        cancel_url: `http://localhost:5173/book-details_page/${paymentInfo?.bookId}`,
+      })
+      res.send({ url: session.url })
     })
 
 
