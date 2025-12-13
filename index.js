@@ -358,6 +358,112 @@ app.get('/users', async (req, res) => {
 
 
 
+      app.post('/payment-success', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).send({ success: false, message: "Session ID missing" });
+    }
+
+    // Stripe session retrieve
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    // Payment complete checking
+    if (session.payment_status !== "paid") {
+      return res.status(400).send({
+        success: false,
+        message: "Payment not completed",
+      });
+    }
+
+    // metadata > orderId rechive
+    const orderId = session.metadata.orderId;
+
+    // Order update
+    const updateResult = await orderCollection.updateOne(
+      { _id: new ObjectId(orderId) },
+      {
+        $set: {
+          status: "confirmed",
+          paymentStatus: "paid",
+          transactionId: session.payment_intent,
+        },
+      }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found or already updated",
+      });
+    }
+
+    res.send({
+      success: true,
+      message: "Payment successful & order updated",
+      orderId,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Payment success processing failed",
+    });
+  }
+});
+
+
+    // app.post('/payment-success', async (req, res) => {
+    //   const { sessionId } = req.body
+    //   const session = await stripe.checkout.sessions.retrieve(sessionId)
+    //   console.log(sessionId)
+      // const plant = await bookCollection.findOne({
+      //   _id: new ObjectId(session.metadata.plantId),
+      // })
+      // const order = await orderCollection.findOne({
+      //   transactionId: session.payment_intent,
+      // })
+
+      // if (session.status === 'complete' && plant && !order) {
+      //   // save order data in db
+      //   const orderInfo = {
+      //     plantId: session.metadata.plantId,
+      //     transactionId: session.payment_intent,
+      //     customer: session.metadata.customer,
+      //     status: 'pending',
+      //     seller: plant.seller,
+      //     name: plant.name,
+      //     category: plant.category,
+      //     quantity: 1,
+      //     price: session.amount_total / 100,
+      //     image: plant?.image,
+      //   }
+      //   const result = await orderCollection.insertOne(orderInfo)
+      //   // update plant quantity
+      //   await bookCollection.updateOne(
+      //     {
+      //       _id: new ObjectId(session.metadata.plantId),
+      //     },
+      //     { $inc: { quantity: -1 } }
+      //   )
+
+      //   return res.send({
+      //     transactionId: session.payment_intent,
+      //     orderId: result.insertedId,
+      //   })
+      // }
+      // res.send(
+      //   res.send({
+      //     transactionId: session.payment_intent,
+      //     orderId: order._id,
+      //   })
+      // )
+    // })
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
