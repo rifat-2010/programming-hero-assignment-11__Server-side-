@@ -461,7 +461,7 @@ app.put('/books/status/:id', async (req, res) => {
 
 
 
-// All 
+// All Server
 
 
 // PUT /users/role/:id → update user role (admin only)
