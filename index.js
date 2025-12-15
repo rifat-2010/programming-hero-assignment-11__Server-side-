@@ -361,6 +361,43 @@ app.get('/orders', async (req, res) => {
 
 
 
+// for user dashboard's Invoices page
+// GET /invoices?email=user@email.com
+app.get('/invoices', async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    if (!email) {
+      return res.status(400).send({
+        success: false,
+        message: "Email is required"
+      });
+    }
+
+    const invoices = await orderCollection.find({
+      email: email,
+      status: "confirmed",
+      paymentStatus: "paid"
+    }).toArray();
+
+    res.send({
+      success: true,
+      orders: invoices
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Failed to fetch invoices"
+    });
+  }
+});
+
+
+
+
+
+
 // GET /wishlist?email=userEmail → fetch wishlist of a user
 app.get('/wishlist', async (req, res) => {
   try {
