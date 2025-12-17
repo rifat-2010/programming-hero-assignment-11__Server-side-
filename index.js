@@ -7,7 +7,7 @@ const port = 3000;
 // need to change origin url to deploy url after finishing deploy this site
 app.use(
   cors({
-    origin: ["https://bookcourier.netlify.app/"],
+    origin: ["https://bookcourier.netlify.app", "http://localhost:5173"],
     credentials: true,
   })
 );
